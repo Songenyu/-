@@ -1,0 +1,576 @@
+package 连连看;
+
+import javax.swing.*; 
+import java.awt.*; 
+import java.awt.event.*;
+import java.io.File; 
+import javax.swing.Timer;
+
+import 连连看.time.CountingThread;
+
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+
+public class Lianliankan implements ActionListener 
+{ 
+int RANGE=25;
+int COLS=8;
+int ROWS=7;
+JFrame mainFrame; //主面板 
+Container thisContainer; 
+JPanel centerPanel,southPanel,northPanel; //子面板 
+JButton diamondsButton[][] = new JButton[COLS][ROWS];//游戏按钮数组 
+JButton exitButton,resetButton,newlyButton; //退出，重列，重新开始按钮 
+JLabel fractionLable=new JLabel("0"); //分数标签 
+JButton firstButton,secondButton; //分别记录两次被选中的按钮 
+int grid[][] = new int[COLS+2][ROWS+2];//储存游戏按钮位置 
+static boolean pressInformation=false; //判断是否有按钮被选中 
+int x0=0,y0=0,x=0,y=0,fristMsg=0,secondMsg=0,validateLV; //游戏按钮的位置坐标 
+int i,j,k,n;//消除方法控制 
+
+
+public void init(){ 
+mainFrame=new JFrame("连连看"); 
+thisContainer = mainFrame.getContentPane(); 
+thisContainer.setLayout(new BorderLayout()); 
+centerPanel=new JPanel(); 
+southPanel=new JPanel(); 
+northPanel=new JPanel(); 
+thisContainer.add(centerPanel,"Center"); 
+thisContainer.add(southPanel,"South"); 
+thisContainer.add(northPanel,"North"); 
+centerPanel.setLayout(new GridLayout(COLS,ROWS)); 
+for(int cols = 0;cols < COLS;cols++){ 
+for(int rows = 0;rows < ROWS;rows++ ){ 
+diamondsButton[cols][rows]=new JButton(String.valueOf(grid[cols+1][rows+1])); 
+diamondsButton[cols][rows].addActionListener(this); 
+centerPanel.add(diamondsButton[cols][rows]); 
+} 
+} 
+exitButton=new JButton("退出"); 
+exitButton.addActionListener(this); 
+resetButton=new JButton("重列"); 
+resetButton.addActionListener(this); 
+newlyButton=new JButton("再来一局"); 
+newlyButton.addActionListener(this); 
+southPanel.add(exitButton); 
+southPanel.add(resetButton); 
+southPanel.add(newlyButton); 
+fractionLable.setText(String.valueOf(Integer.parseInt(fractionLable.getText()))); 
+northPanel.add(fractionLable); 
+mainFrame.setBounds(280,100,500,450); 
+mainFrame.setVisible(true); 
+}
+
+
+public void randomBuild() { 
+int randoms,cols,rows; 
+for(int twins=1;twins<=(COLS*ROWS)/2;twins++)
+{ 
+
+	randoms=(int)(Math.random()*RANGE+1); 
+
+	for(int alike=1;alike<=2;alike++) 
+	{ 
+
+		cols=(int)(Math.random()*COLS+1); 
+
+		rows=(int)(Math.random()*ROWS+1); 
+
+		while(grid[cols][rows]!=0) 
+		{ 
+
+			cols=(int)(Math.random()*COLS+1); 
+
+			rows=(int)(Math.random()*ROWS+1); 
+
+		} 
+
+		this.grid[cols][rows]=randoms; 
+
+	} 
+} 
+
+} 
+
+public void fraction(){ 
+fractionLable.setText(String.valueOf(Integer.parseInt(fractionLable.getText())+100)); 
+} 
+
+
+
+public void reload() { 
+int save[] = new int[COLS*ROWS]; 
+int n=0,cols,rows; 
+int grid[][]= new int[COLS+2][ROWS+2]; 
+for(int i=0;i<=8;i++) 
+{ 
+	for(int j=0;j<=7;j++) 
+	{ 
+
+		if(this.grid[i][j]!=0) 
+		{ 
+
+			save[n]=this.grid[i][j]; 
+			n++; 
+			}
+		} 
+} 
+n=n-1; 
+this.grid=grid; 
+while(n>=0) 
+{ 
+
+	cols=(int)(Math.random()*COLS+1); 
+	rows=(int)(Math.random()*ROWS+1); 
+	while(grid[cols][rows]!=0) 
+	{ 
+
+		cols=(int)(Math.random()*COLS+1); 
+		rows=(int)(Math.random()*ROWS+1); 
+		} 
+	this.grid[cols][rows]=save[n]; 
+	n--; 
+
+} 
+mainFrame.setVisible(false); 
+pressInformation=false; //这里一定要将按钮点击信息归为初始 
+init(); 
+for(int i = 0;i < 8;i++)
+{ 
+
+	for(int j = 0;j < 7;j++ )
+	{ 
+
+		if(grid[i+1][j+1]==0) 
+			diamondsButton[i][j].setVisible(false); 
+
+	} 
+
+} 
+} 
+
+public void estimateEven(int placeX,int placeY,JButton bz) { 
+if(pressInformation==false) 
+{ 
+
+	x=placeX; 
+	y=placeY; 
+	secondMsg=grid[x][y]; 
+	secondButton=bz; 
+	pressInformation=true; 
+} 
+else { 
+
+	x0=x; 
+	y0=y; 
+	fristMsg=secondMsg; 
+	firstButton=secondButton; 
+	x=placeX; 
+	y=placeY; 
+	secondMsg=grid[x][y]; 
+	secondButton=bz; 
+if(fristMsg==secondMsg && secondButton!=firstButton)
+{ 
+	xiao(); 
+	} 
+} 
+} 
+
+
+
+
+public void xiao() { //相同的情况下能不能消去。仔细分析，不一条条注释 
+if((x0==x &&(y0==y+1||y0==y-1)) || ((x0==x+1||x0==x-1)&&(y0==y))){ //判断是否相邻 
+remove(); 
+} 
+else{ 
+for (j=0;j<ROWS+2;j++ ) { 
+if (grid[x0][j]==0){ //判断第一个按钮同行哪个按钮为空 
+if (y>j) { //如果第二个按钮的Y坐标大于空按钮的Y坐标说明第一按钮在第二按钮左边 
+for (i=y-1;i>=j;i-- ){ //判断第二按钮左侧直到第一按钮中间有没有按钮 
+if (grid[x][i]!=0) { 
+k=0; 
+break; 
+} 
+else{ k=1; } //K=1说明通过了第一次验证 
+} 
+if (k==1) { 
+linePassOne(); 
+} 
+} 
+if (y<j){ //如果第二个按钮的Y坐标小于空按钮的Y坐标说明第一按钮在第二按钮右边 
+for (i=y+1;i<=j ;i++ ){ //判断第二按钮左侧直到第一按钮中间有没有按钮 
+if (grid[x][i]!=0){ 
+k=0; 
+break; 
+} 
+else { k=1; } 
+} 
+if (k==1){ 
+linePassOne(); 
+} 
+} 
+if (y==j ) { 
+linePassOne(); 
+} 
+} 
+if (k==2) { 
+if (x0==x) { 
+remove(); 
+} 
+if (x0<x) { 
+for (n=x0;n<=x-1;n++ ) { 
+if (grid[n][j]!=0) { 
+k=0; 
+break; 
+} 
+if(grid[n][j]==0 && n==x-1) { 
+remove(); 
+} 
+} 
+} 
+if (x0>x) { 
+for (n=x0;n>=x+1 ;n-- ) { 
+if (grid[n][j]!=0) { 
+k=0; 
+break; 
+} 
+if(grid[n][j]==0 && n==x+1) { 
+remove(); 
+} 
+} 
+} 
+} 
+} 
+for (i=0;i<COLS+2;i++ ) { //列 
+if (grid[i][y0]==0) { 
+if (x>i) { 
+for (j=x-1;j>=i ;j-- ) { 
+if (grid[j][y]!=0) { 
+k=0; 
+break; 
+} 
+else { k=1; } 
+} 
+if (k==1) { 
+rowPassOne(); 
+} 
+} 
+if (x<i) { 
+for (j=x+1;j<=i;j++ ) { 
+if (grid[j][y]!=0) { 
+k=0; 
+break; 
+} 
+else { k=1; } 
+} 
+if (k==1) { 
+rowPassOne(); 
+} 
+} 
+if (x==i) { 
+rowPassOne(); 
+} 
+} 
+if (k==2){ 
+if (y0==y) { 
+remove(); 
+} 
+if (y0<y) { 
+for (n=y0;n<=y-1 ;n++ ) { 
+if (grid[i][n]!=0) { 
+k=0; 
+break; 
+} 
+if(grid[i][n]==0 && n==y-1) { 
+remove(); 
+} 
+} 
+} 
+if (y0>y) { 
+for (n=y0;n>=y+1 ;n--) { 
+if (grid[i][n]!=0) { 
+k=0; 
+break; 
+} 
+if(grid[i][n]==0 && n==y+1) { 
+remove(); 
+} 
+} 
+} 
+} 
+} 
+} 
+} 
+
+
+
+
+
+
+public void linePassOne(){ 
+if (y0>j){ //第一按钮同行空按钮在左边 
+for (i=y0-1;i>=j ;i-- ){ //判断第一按钮同左侧空按钮之间有没按钮 
+if (grid[x0][i]!=0) { 
+k=0; 
+break; 
+} 
+else { k=2; } //K=2说明通过了第二次验证 
+} 
+} 
+if (y0<j){ //第一按钮同行空按钮在与第二按钮之间 
+for (i=y0+1;i<=j ;i++){ 
+if (grid[x0][i]!=0) { 
+k=0; 
+break; 
+} 
+else{ k=2; } 
+} 
+} 
+} 
+public void rowPassOne(){ 
+if (x0>i) { 
+for (j=x0-1;j>=i ;j-- ) { 
+if (grid[j][y0]!=0) { 
+k=0; 
+break; 
+} 
+else { k=2; } 
+} 
+} 
+if (x0<i) { 
+for (j=x0+1;j<=i ;j++ ) { 
+if (grid[j][y0]!=0) { 
+k=0; 
+break; 
+} 
+else { k=2; } 
+} 
+} 
+} 
+public void remove(){ 
+firstButton.setVisible(false); 
+secondButton.setVisible(false); 
+fraction(); 
+pressInformation=false; 
+k=0; 
+grid[x0][y0]=0; 
+grid[x][y]=0; 
+} 
+
+
+
+
+public void actionPerformed(ActionEvent e) { 
+if(e.getSource()==newlyButton){ 
+int grid[][] = new int[COLS+2][ROWS+2]; 
+this.grid = grid; 
+randomBuild(); 
+mainFrame.setVisible(false); 
+pressInformation=false; 
+init(); 
+} 
+if(e.getSource()==exitButton) 
+System.exit(0); 
+if(e.getSource()==resetButton) 
+reload(); 
+for(int cols = 0;cols < COLS;cols++){ 
+for(int rows = 0;rows < ROWS;rows++ ){ 
+if(e.getSource()==diamondsButton[cols][rows]) 
+estimateEven(cols+1,rows+1,diamondsButton[cols][rows]); 
+} 
+} 
+} 
+
+
+
+
+
+public static void main(String[] args) { 
+Lianliankan llk = new Lianliankan(); 
+llk.randomBuild(); 
+llk.init(); 
+
+
+} 
+} 
+class time extends JFrame {
+	/**
+	 * 序列化
+	 */
+	private static final long serialVersionUID = 4408196785766662795L;
+	// 初始显示
+	private static final String INITIAL_LABEL_TEXT = "00:00:00";
+	// 计数线程 内部类
+	private CountingThread thread = new CountingThread();
+	// 计时器开始时间
+	private long progranStart = System.currentTimeMillis();
+	// 计时器初始状态是暂停的
+	private long pauseStart = progranStart;
+	// 计时器暂停时的时间
+	private long pauseCount = 0;
+	static JLabel lable2 = new JLabel(INITIAL_LABEL_TEXT);
+	static JButton startPanuseButton = new JButton("开始");
+	static JButton resetButtone = new JButton("清零");
+	/**
+	 * 暂停或者继续的监听器
+	 * 
+	 */
+	private ActionListener startPauseButtonListener = new ActionListener() {
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			if (thread.stopped) {
+				// 暂停的时间=开始的时间-暂停时的总时间+暂停的时间
+				pauseCount += (System.currentTimeMillis() - pauseStart);
+				thread.stopped = false; // 停止计数线程运行
+				startPanuseButton.setText("暂停");// 将开始按钮变成暂停按钮
+			} else {
+				pauseStart = System.currentTimeMillis();
+				thread.stopped = true;
+				startPanuseButton.setText("继续");
+			}
+
+		}
+	};
+	// 定义一个侦听器，点击清零时触发
+	private ActionListener resetButtonList = new ActionListener() {
+
+		@Override
+		public void actionPerformed(ActionEvent e) {
+			pauseStart = progranStart; // 开始计时
+			pauseCount = 0; // 暂停的时间清零
+			thread.stopped = true;// 启动计时线程
+			lable2.setText(INITIAL_LABEL_TEXT);// 00:00:00
+			startPanuseButton.setText("开始");
+		}
+	};
+
+	/**
+	 * 定义个一内部类:计算线程,计算总的时间
+	 * 
+	 * @author soft01
+	 *
+	 */
+	// 计时器线程
+	class CountingThread extends Thread {
+		/**
+		 * 定义一个状态，判断是否是(暂停、继续)计时
+		 */
+		public boolean stopped = true;
+
+		private CountingThread() {
+			/**
+			 * 定义守护线程(主线程结束时，守护线程死亡)
+			 */
+			setDaemon(true);
+		}
+
+		@Override
+		public void run() {
+			while (true) {
+				if (!stopped) {
+					// 减去开始的时间减去暂停的时间
+					long elapsed = System.currentTimeMillis() - progranStart - pauseCount;
+					lable2.setText(Format(elapsed));
+				}
+				try {
+					sleep(1);// 每一毫秒就刷新一次
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+					// System.exit(0);正常退出，程序正常执行结束退出
+					// 如果非正常退出，就是说无论程序正在执行与否，都退出
+					System.exit(1);
+				}
+			}
+		}
+          //时间转换的方法   将每次刷新的值，换成时，分,秒，毫秒
+		private String Format(long elapsed) {
+			int hour, minute, second, milli;// 定义时，分，妙，毫秒
+			milli = (int) (elapsed % 1000);
+			elapsed = elapsed / 1000;
+
+			second = (int) (elapsed % 60);
+			elapsed = elapsed / 60;
+
+			minute = (int) (elapsed % 60);
+			elapsed = elapsed / 60;
+
+			hour = (int) (elapsed % 60);
+			// %02d:%02d:%02d:%03d 00:00:00:000
+			return String.format("%02d:%02d:%02d:%03d", hour, minute, second, milli);
+		}
+	}
+
+	// 构造方法
+	public time(String title) {
+		super(title);
+		// 对开始、暂停按钮进行侦听
+		startPanuseButton.addActionListener(startPauseButtonListener);
+		// 对清零按钮进行侦听
+		resetButtone.addActionListener(resetButtonList);
+		// 启动计数线程
+		thread.start();
+	}
+
+	public static void main(String[] args) throws InterruptedException {
+		time frame = new time("时间");
+		JPanel panel = new JPanel();
+		Font font = new Font("宋体", Font.BOLD, 30);
+		
+		
+		
+		JLabel lable = new JLabel();
+
+		// try {
+		// UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+		// } catch (Exception e) {
+		// // TODO: handle exception
+		// }
+
+		panel.setLayout(null);// 打破面板的默认布局，只有这样标签才能移动
+
+		lable.setFont(font);
+		lable.setOpaque(true);// 打破标签的默认布局
+		lable.setBounds(200, 60, 330, 60); // 设置标签的位置
+		
+		lable2.setFont(font);
+		lable2.setOpaque(true);// 打破标签的默认布局
+		lable2.setBounds(200, 180, 330, 60);
+		startPanuseButton.setBounds(200, 280, 90, 60);
+		resetButtone.setBounds(400, 280, 90, 60);
+		panel.add(startPanuseButton);
+		panel.add(resetButtone);
+		panel.add(lable); // 把标签贴到面板上
+		panel.add(lable2);
+		frame.add(panel); // 将面板插入到窗口中去
+		frame.setSize(800, 400); // 设置窗口的宽高
+		frame.setLocationRelativeTo(null);// 设置窗口默认中间
+		frame.setAlwaysOnTop(true);// 设置窗口永远显示在最前端
+	
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frame.setVisible(true);
+		// frame.pack();
+		/**
+		 * 不断刷新当前时间
+		 */
+		
+	}
+
+}
+
+/**
+ * 定义一个Timerto类,继承Runnable 输出现在的时间
+ * 
+ * @author wlw
+ *
+ */
