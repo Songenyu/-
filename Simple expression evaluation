@@ -1,0 +1,298 @@
+#include <stdio.h>
+#include <malloc.h>
+#include <string.h>
+#include <Windows.h>
+#include <math.h>
+#include <stdlib.h>
+/*////////////////////////////////////////*/
+void error_ch(double c);
+void error_0(double c);
+/*///////////////////////////////////////////////////////*/
+/*数字栈*/
+typedef struct List
+{
+	double number;
+	struct List *next;
+}List , *myStack_operand;//数据栈的一个单元
+
+
+myStack_operand bottom_operand = (myStack_operand)malloc(sizeof(List));//栈底
+myStack_operand top_operand = bottom_operand;//栈顶
+
+//数字push
+void push(double element)
+{
+	myStack_operand it = (myStack_operand)malloc(sizeof(List));
+	it->number = element;
+	it->next = top_operand;
+	top_operand = it;
+}
+//数字pop
+void pop(int i)
+{
+	myStack_operand temp;
+	temp = top_operand;
+	top_operand = top_operand->next;
+	free(temp);
+	
+
+}
+//数字top
+double topvalue_operand()
+{
+	return top_operand->number;
+}
+
+
+/*///////////////////////////////////////////////////////*/
+/*字符栈*/
+typedef struct Link
+{
+	char operate;
+	int protiety;
+	struct Link *next;
+}Link,*myStack_operate;//数据栈的一个单元
+myStack_operate bottom_operate = (myStack_operate)malloc(sizeof(Link));//栈底
+myStack_operate top_operate = bottom_operate;//栈顶
+
+void start()
+{
+
+
+	bottom_operand->next = NULL;
+	bottom_operand->number = 3;
+	bottom_operate->next = NULL;
+	bottom_operate->operate = '&';
+	bottom_operate->protiety = 0;
+}
+//字符push
+void push(char element, int protiety)
+{
+	myStack_operate it = (myStack_operate)malloc(sizeof(Link));
+	it->operate = element;
+	it->protiety = protiety;
+	it->next = top_operate;
+	top_operate = it;
+}
+//字符pop
+void pop(char ch)
+{
+	myStack_operate temp;
+	temp = top_operate;
+	top_operate = top_operate->next;
+	free(temp);
+}
+//字符top的优先级
+int topvalue_protiety()
+{
+	return top_operate->protiety;
+}
+//字符top的字符
+char topvalue_operate()
+{
+	return top_operate->operate;
+}
+
+
+double mygetdouble(char *p, int lowindex, int highindex)
+{
+	char a[20];
+	int i;
+	for (i = 0; i < 19 && i < highindex - lowindex + 1; i++)
+	{
+		a[i] = p[lowindex + i];
+	}
+	a[i] = '\0';
+	int n = highindex - lowindex + 1;
+	//操作类似与以前看过的例子
+
+	for (i = 0; i < n; i++)if (a[i] == '.')break;
+	int b=i;
+	double x = 0;
+	for (int m = 0; m < n; m++)
+	{
+		if (m == b)
+		{
+			i++;  continue;//如果正好m在.位置上时，为了方便求小数
+		}
+		x = ((double)((int)a[m] - 48))*pow(10, i - m - 1) + x;//在i>m的时候求整数部分的值
+	}
+	return x;
+}
+/////////////////////////////////////////////////////////////////////////////
+/*简单的界面*/
+void menu()
+{
+	printf("/****************************************/\n");
+	printf("请输入你的表达式：\n");
+}
+
+
+/*直接由中缀表达式得出结果*/
+double getvalue()
+{
+	system("cls");
+	char ch_1[100];//输入中缀表达式
+	char ch_2[100];//转化为后缀表达式
+	int now = 0;
+
+
+	int lowindex = 0;
+	int mark_index = 0;//记录是不是数子的第一个数
+
+	int low_protiety = 0;
+	int mark_protiety = 0;
+
+	char ch;
+	double a = 0;
+	double b = 0;
+	double c = 0;
+
+	menu();
+
+	scanf("%s", ch_1);
+	int length = strlen(ch_1) + 1;
+
+for (; now < length; now++)
+	{
+		if ((ch_1[now] >= '0'&&ch_1[now] <= '9') || (ch_1[now] == '.'))
+		{
+			if (mark_index == 0)
+			{
+				lowindex = now;
+				mark_index = 1;
+			}//用mark记录初始位置
+		}
+		else if (ch_1[now] == '+' || ch_1[now] == '-' || ch_1[now] == '*' || ch_1[now] == '/' )
+		{
+			//push(todouble(mygetchar(ch_1, lowindex, now - 1), now - lowindex));//判断是数字之后，转化为数字并入栈
+			push(mygetdouble(ch_1, lowindex, now - 1));
+			mark_index = 0;
+			switch (ch_1[now])
+			{
+			case '+':low_protiety = 1; break;
+			case '-':low_protiety = 1; break;
+			case '*':low_protiety = 2; break;
+			case '/':low_protiety = 2; break;
+			}
+			if (low_protiety + mark_protiety > topvalue_protiety())
+				push(ch_1[now], low_protiety + mark_protiety);
+			else {
+				ch = topvalue_operate(); pop('1');
+				b = topvalue_operand(); pop(1);
+				a = topvalue_operand(); pop(1);
+				switch (ch)
+				{
+				case '+':c = a + b; break;
+				case '-':c = a - b; break;
+				case '*':c = a * b; break;
+				case '/':
+					if (b == 0) error_0(c);
+					else
+					{
+						c = a / b;
+					}
+					break;
+				}
+				push(c);
+				push(ch_1[now], low_protiety + mark_protiety);
+
+			}
+
+		}
+		else if (ch_1[now] == '(' || ch_1[now] == ')')
+		{
+			switch (ch_1[now])
+			{
+			case '(':mark_protiety+=2; break;
+			case ')':mark_protiety-=2; break;
+			}
+			memmove(&ch_1[now], &ch_1[now+1], length-1-now);
+			length--;
+			now--;}
+		else if (ch_1[now] == '\0')
+		{
+			push(mygetdouble(ch_1, lowindex, now - 1));
+			mark_index = 0;
+			//while (!clean('&'))
+			while ((top_operate != bottom_operate) && (top_operand != bottom_operand))
+			{
+				ch = topvalue_operate(); pop('1');
+				b = topvalue_operand(); pop(1);
+				a = topvalue_operand(); pop(1);
+				switch (ch)
+				{
+				case '+':c = a + b;  break;
+				case '-':c = a - b;  break;
+				case '*':c = a * b;  break;
+				case '/':
+					if (b == 0) error_0(c);
+					else
+					{
+						c = a / b;
+					}break;
+				}
+				push(c);
+			}
+			break;
+		}
+		else {
+			printf("输入无关字符，请重新输入\n\n");
+			error_ch(c);
+		}
+	}
+	free(bottom_operand);
+	free(bottom_operate);
+	return topvalue_operand();
+}
+/*其他字符界面*/
+void error_ch(double c)
+{
+	int choice = 0;
+	printf("\n/***************************************/\n");
+	printf("  1.继续                         0.退出\n");
+	scanf("%d", &choice);
+	switch (choice)
+	{
+	case 1:Sleep(1500);
+
+		c = getvalue();
+		break;
+	case 0:exit(0); break;
+	default:
+		printf("你的输入依然错误，请看仔细重新输入\n");
+		error_ch(c);
+		break;
+	}
+}
+
+/**/
+void error_0(double c)
+{
+	int choice = 0;
+	printf("\n/***************************************/\n");
+	printf("           除数不能为零，请仔细检查\n");
+	printf("  1.重新输入                        0.退出\n");
+	scanf("%d", &choice);
+	switch (choice)
+	{
+	case 1:Sleep(1500);
+
+		c = getvalue();
+		break;
+	case 0:exit(0); break;
+	default:
+		printf("输入错误，请看仔细重新输入\n");
+		error_ch(c);
+		break;
+	}
+}
+
+/*//////////////////////////////////////////////////////////////////////////////*/
+int main()
+{
+	start();
+	double x = getvalue();
+	printf("得出结果:%lf", x);
+	getchar();
+}
